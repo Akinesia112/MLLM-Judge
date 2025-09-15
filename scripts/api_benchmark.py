@@ -7,9 +7,24 @@ import json
 from tqdm import tqdm
 import os
 from prompt import get_prompt
-from get_vlm_res import gpt_4v, gpt_4o, llava_1_6_34b, llava_1_6_13b, llava_1_6_7b, qwen_vl_plus, qwen_vl_max
+from get_vlm_res import gpt_4o_mini, gpt_4o, llava_1_6_34b, llava_1_6_13b, llava_1_6_7b, qwen_vl_plus, qwen_vl_max
 
 import time
+import re
+
+
+def try_parse_json(text: str):
+    if text is None:
+        return None
+    # 去除三引號 code fence（含 ```json 或 ```）
+    cleaned = re.sub(r"^\s*```(?:json)?\s*|\s*```\s*$", "", text.strip(), flags=re.DOTALL|re.IGNORECASE)
+    # 去掉可能多餘的 BOM / 雜訊
+    cleaned = cleaned.strip("\ufeff").strip()
+    try:
+        return json.loads(cleaned)
+    except Exception as e:
+        print("⚠️ JSON parse failed:", e, "Raw snippet:", cleaned[:200])
+        return None
 
 def retry(attempts=3, delay=10):
     def decorator(func):
@@ -25,7 +40,7 @@ def retry(attempts=3, delay=10):
         return wrapper
     return decorator
 
-
+'''
 @retry(3)
 def get_res(model, image_path, prompt, api, temperature, top_p, llm_assist: bool=False):
     func_name = model.replace("-", "_").replace(".", "_")
@@ -38,8 +53,18 @@ def get_res(model, image_path, prompt, api, temperature, top_p, llm_assist: bool
         if llm_assist:
             pass
         return output, None
-    
+'''
 
+@retry(3)
+def get_res(model, image_path, prompt, api, temperature, top_p, llm_assist: bool=False):
+    func_name = model.replace("-", "_").replace(".", "_")
+    func = globals().get(func_name)
+    output = func(image_path, prompt, api, temperature, top_p)
+    if output is None:
+        return None
+    json_output = try_parse_json(output)
+    return output, json_output
+    
 
 def construct_input(prompt_dict, judge_mode, setting, instruction, responses):
     prompt = prompt_dict["start"] + "\nEvaluation Steps:\n" + prompt_dict["setting"][setting] + "\nEvaluation Method:\n" + prompt_dict["tasks"][judge_mode] + "\nNotice:\n" + prompt_dict["notice"] + "\nHere is the input:\n"
@@ -89,8 +114,16 @@ def benchmark(model, judge_mode, setting, api, image_dir, temperature, top_p):
         os.makedirs(folder_path)
         
     prompt_dict = get_prompt()
-    for item in tqdm(items[:3], desc="Processing items"):
-        image_path = image_dir + item['image_path']  
+
+    
+    #for item in tqdm(items[:3], desc="Processing items"):
+    for item in tqdm(items, desc="Processing items"):
+        # image_path = image_dir + item['image_path'] 
+        image_path = os.path.join(image_dir, item['image_path'])
+        if not os.path.isfile(image_path):
+            print(f"⚠️ Missing image: {image_path} — skipping.")
+            continue
+
         if judge_mode == 'score':
             responses = [item['answer']]
         elif judge_mode == 'pair':
@@ -99,9 +132,15 @@ def benchmark(model, judge_mode, setting, api, image_dir, temperature, top_p):
             responses = [i['answer'] for i in item['answers']]
         prompt = construct_input(prompt_dict, judge_mode, setting, item['instruction'], responses=responses)
         print(prompt)
-        raw_response, json_response = get_res(model, image_path, prompt, api, temperature, top_p)
+
+        result = get_res(model, image_path, prompt, api, temperature, top_p)
+        if result is None:
+            print(f"Failed to get response for {image_path}")
+            continue
+        raw_response, json_response = result
         item['mllm_judge'] = raw_response
-        # item['json_mllm_judge'] = json_response
+        if json_response is not None:
+            item['json_mllm_judge'] = json_response
         with open(output_path, "a") as jsonl_file:
             jsonl_file.write(json.dumps(item) + "\n")
         
@@ -117,7 +156,7 @@ def main():
     parser.add_argument("--api", type=str, default=None, help="API for inference.")
     args = parser.parse_args()
     assert args.judge_mode in ['score', 'batch', 'pair'], "Invalid judge mode"
-    assert args.model in ['gemini', 'gpt-4v', 'gpt-4o', 'llava-1.6-34b', 'llava-1.6-13b', 'llava-1.6-7b', 'qwen-vl-plus', 'qwen-vl-max', 'qwen-vl-chat']
+    assert args.model in ['gemini', 'gpt-4v', 'gpt-4o', 'gpt-4o-mini', 'llava-1.6-34b', 'llava-1.6-13b', 'llava-1.6-7b', 'qwen-vl-plus', 'qwen-vl-max', 'qwen-vl-chat']
     
     benchmark_result = benchmark(args.model, args.judge_mode, args.setting, args.api, args.image_root, args.temperature, args.top_p)
     

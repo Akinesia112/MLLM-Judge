@@ -6,13 +6,14 @@ import replicate
 import dashscope
 from http import HTTPStatus
 import os
+import time
 
 def encode_image(image_path):
     with open(image_path, "rb") as image_file:
         return base64.b64encode(image_file.read()).decode('utf-8')
     
     
-def gpt_4v(image_path, prompt, api, temperature, top_p):
+def gpt_4o_mini(image_path, prompt, api, temperature, top_p):
     with open(image_path, "rb") as image:
         image_base64 = base64.b64encode(image.read()).decode("utf-8")
         
@@ -21,32 +22,59 @@ def gpt_4v(image_path, prompt, api, temperature, top_p):
         # "Content-Type": "application/json"
     }
     payload = {
-                "model": "gpt-4-vision-preview",
-                "messages": [
+        "model": "gpt-4o-mini",
+        "messages": [
+            {
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": prompt},
                     {
-                        "role": "user",
-                        "content": [
-                            {
-                                "type": "text",
-                                "text": prompt
-                            },
-                            {
-                                "type": "image_url",
-                                "image_url": {
-                                    "url": f"data:image/jpeg;base64,{image_base64}"
-                                }
-                            }
-                        ]
+                        "type": "image_url",
+                        "image_url": {"url": f"data:image/jpeg;base64,{image_base64}"}
                     }
-                ],
-                "max_tokens": 1024,
-                "temperature": temperature,
-                "top_p": top_p
+                ]
             }
-    response = requests.post('https://api.openai.com/v1/chat/completions', headers=headers, json=payload)
-    response = response.json()
-    print(response['choices'][0]['message']['content'])
-    return response['choices'][0]['message']['content']
+        ],
+        "max_tokens": 1024,
+        "temperature": temperature,
+        "top_p": top_p,
+        "response_format": {"type": "json_object"}
+    }
+
+    response = requests.post(
+        "https://api.openai.com/v1/chat/completions",
+        headers=headers,
+        json=payload,
+        timeout=60
+    )
+
+    if response.status_code == 429:
+        wait = int(response.headers.get("Retry-After", "5"))
+        print(f"⏳ Rate limited. Backing off {wait}s...")
+        time.sleep(wait)
+        return None
+
+    if response.status_code != 200:
+        print(f"❌ OpenAI API HTTP {response.status_code}: {response.text[:200]}")
+        return None
+
+    try:
+        resp_json = response.json()
+    except Exception as e:
+        print("❌ Failed to parse JSON:", e, "Raw:", response.text[:200])
+        return None
+
+    if "error" in resp_json:
+        print("❌ OpenAI API Error:", resp_json["error"]["message"])
+        return None
+
+    try:
+        output = resp_json["choices"][0]["message"]["content"]
+        print("DEBUG GPT output:", output[:200])
+        return output
+    except Exception as e:
+        print("❌ Parsing error:", e, "Raw response:", resp_json)
+        return None
 
 def gpt_4o(image_path, prompt, api, temperature, top_p):
     with open(image_path, "rb") as image:
@@ -57,32 +85,59 @@ def gpt_4o(image_path, prompt, api, temperature, top_p):
         # "Content-Type": "application/json"
     }
     payload = {
-                "model": "gpt-4o-2024-05-13",
-                "messages": [
+        "model": "gpt-4o",
+        "messages": [
+            {
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": prompt},
                     {
-                        "role": "user",
-                        "content": [
-                            {
-                                "type": "text",
-                                "text": prompt
-                            },
-                            {
-                                "type": "image_url",
-                                "image_url": {
-                                    "url": f"data:image/jpeg;base64,{image_base64}"
-                                }
-                            }
-                        ]
+                        "type": "image_url",
+                        "image_url": {"url": f"data:image/jpeg;base64,{image_base64}"}
                     }
-                ],
-                "max_tokens": 1024,
-                "temperature": temperature,
-                "top_p": top_p
+                ]
             }
-    response = requests.post('https://api.openai.com/v1/chat/completions', headers=headers, json=payload)
-    response = response.json()
-    print(response['choices'][0]['message']['content'])
-    return response['choices'][0]['message']['content']
+        ],
+        "max_tokens": 1024,
+        "temperature": temperature,
+        "top_p": top_p,
+        "response_format": {"type": "json_object"}
+    }
+
+    response = requests.post(
+        "https://api.openai.com/v1/chat/completions",
+        headers=headers,
+        json=payload,
+        timeout=60
+    )
+    if response.status_code == 429:
+        wait = int(response.headers.get("Retry-After", "5"))
+        print(f"⏳ Rate limited. Backing off {wait}s...")
+        time.sleep(wait)
+        return None
+
+    if response.status_code != 200:
+        print(f"❌ OpenAI API HTTP {response.status_code}: {response.text[:200]}")
+        return None
+
+    try:
+        resp_json = response.json()
+    except Exception as e:
+        print("❌ Failed to parse JSON:", e, "Raw:", response.text[:200])
+        return None
+
+    if "error" in resp_json:
+        print("❌ OpenAI API Error:", resp_json["error"]["message"])
+        return None
+
+    try:
+        output = resp_json["choices"][0]["message"]["content"]
+        print("DEBUG GPT output:", output[:200])
+        return output
+    except Exception as e:
+        print("❌ Parsing error:", e, "Raw response:", resp_json)
+        return None
+
 
 
 def gemini(image_path, prompt, api, temperature, top_p):
