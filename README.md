@@ -96,7 +96,7 @@ python api_benchmark.py   --model "gpt-4o"   --top_p 0.2   --temperature 0.4   -
 
 <!-- ### local models -->
 
-### Collect Judgments from MLLMs
+### Collect Judgments from MLLMs (Reference: [Misaki-Wang](https://github.com/Misaki-Wang/MLLM-Judge/tree/main))
 #### GPT-4V(ision)
 You can run the following script in shell to collect GPT-4V's judgement:
 ```shell
