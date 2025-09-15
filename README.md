@@ -83,10 +83,17 @@ python scripts/api_benchmark.py \
 --judge_mode <> \ # 'score', 'batch', 'pair'
 --temperature <> \ # default as 0.4
 --top_p <> \ # default as 0.2
---image_dir <path to image> \ 
+--image_root <path to image> \ 
 --setting <> \ # ablation study for COT, default as No COT
 
 ```
+
+For example:
+
+```
+python api_benchmark.py   --model "gpt-4o"   --top_p 0.2   --temperature 0.4   --judge_mode "score"   --image_root "./MLLM-Judge/Dataset/image"   --setting "No COT" --api "sk-proj-XXX"
+```
+
 <!-- ### local models -->
 
 
