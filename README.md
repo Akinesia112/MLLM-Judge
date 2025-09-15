@@ -96,6 +96,52 @@ python api_benchmark.py   --model "gpt-4o"   --top_p 0.2   --temperature 0.4   -
 
 <!-- ### local models -->
 
+### Collect Judgments from MLLMs
+#### GPT-4V(ision)
+You can run the following script in shell to collect GPT-4V's judgement:
+```shell
+# Batch evaluation in No COT settings
+python gpt4_judge.py --input_json '<your_path>/MLLM-Judge/Dataset/Benchmark/Batch.jsonl' --output_json './Batch.jsonl'  --image_root '<your_path>/MLLM-Judge/images' --evaluate 'Batch' --setting 'No COT'
+# Score evaluation in No COT settings
+python gpt4_judge.py --input_json
+'<your_path>/MLLM-Judge/Dataset/Benchmark/Score.jsonl' --output_json './Score.jsonl'  --image_root '<your_path>/MLLM-Judge/images' --evaluate 'Score' --setting 'No COT'
+# Pair Comparison in No COT settings
+python gpt4_judge.py --input_json
+'<your_path>/MLLM-Judge/Dataset/Benchmark/Pair.jsonl' --output_json './Pair.jsonl'  --image_root '<your_path>/MLLM-Judge/images' --evaluate 'Pair' --setting 'No COT'
+```
+#### LLaVA
+You should first follow instructions in [LLaVA's repository](https://github.com/haotian-liu/LLaVA) to download llava-v1.5-13b and create a new python environment called LLaVA. Then, you need to move `\scripts\llava_inference.py` to `<your path>/LLaVA` and move to the `<your path>/LLaVA`. Then, you can run the following to produce MLLM's judging result:
+```shell
+# Batch evaluation in No COT settings
+python llava_judge.py --input_json '<your_path>/MLLM-Judge/Dataset/Benchmark/Batch.jsonl' --output_json './Batch.jsonl'  --image_root '<your_path>/MLLM-Judge/images' --evaluate 'Batch' --setting 'No COT'
+# Score evaluation in No COT settings
+python llava_judge.py --input_json
+'<your_path>/MLLM-Judge/Dataset/Benchmark/Score.jsonl' --output_json './Score.jsonl'  --image_root '<your_path>/MLLM-Judge/images' --evaluate 'Score' --setting 'No COT'
+# Pair Comparison in No COT settings
+python llava_judge.py --input_json
+'<your_path>/MLLM-Judge/Dataset/Benchmark/Pair.jsonl' --output_json './Pair.jsonl'  --image_root '<your_path>/MLLM-Judge/images' --evaluate 'Pair' --setting 'No COT'
+```
+#### Gemini
+You should first register your google account to get a Gemini-Pro API or run the script in Colab Pro.
+To collect judging results from Gemini-Pro-Vision, you should run the following scripts in shell:
+```shell
+# Batch evaluation in No COT settings
+python gemini_judge.py --api 'your_api' --input_json '<your_path>/MLLM-Judge/Dataset/Benchmark/Batch.jsonl' --output_json './Batch.jsonl'  --image_root '<your_path>/MLLM-Judge/images' --evaluate 'Batch' --setting 'No COT'
+# Score evaluation in No COT settings
+python gemini_judge.py --api 'your_api' --input_json '<your_path>/MLLM-Judge/Dataset/Benchmark/Score.jsonl' --output_json './Score.jsonl'  --image_root '<your_path>/MLLM-Judge/images' --evaluate 'Batch' --setting 'No COT'
+# Pair Comparison in No COT settings
+python gemini_judge.py --api 'your_api' --input_json '<your_path>/MLLM-Judge/Dataset/Benchmark/Pair.jsonl' --output_json './Pair.jsonl'  --image_root '<your_path>/MLLM-Judge/images' --evaluate 'Batch' --setting 'No COT'
+```
+Notice: If you run Gemini in your local environment, the inference limitation is very severe, reaching only 60 QPM.
+#### CogVLM
+You should follow the instruction in [CogVLM's repository](https://github.com/THUDM/CogVLM) to download CogVLM checkpoint. Then, you should move `scripts/cogvlm_judge.py` to `<your_path>/CogVLM` to collect judgment from CogVLM, using the following scripts in shell:
+```shell
+# Score evaluation in No COT settings
+python cogvlm_judge.py --api 'your_api' --input_json '<your_path>/MLLM-Judge/Dataset/Benchmark/Score.jsonl' --output_json './Score.jsonl'  --image_root '<your_path>/MLLM-Judge/images' --evaluate 'Batch' --setting 'No COT'
+# Pair Comparison in No COT settings
+python cogvlm_judge.py --api 'your_api' --input_json '<your_path>/MLLM-Judge/Dataset/Benchmark/Pair.jsonl' --output_json './Pair.jsonl'  --image_root '<your_path>/MLLM-Judge/images' --evaluate 'Batch' --setting 'No COT'
+```
+Notice: CogVLM cannot follow our output template in Batch Evaluation setting.
 
 ## Contributing
 Contributions to this project are welcome. Please consider the following ways to contribute:
